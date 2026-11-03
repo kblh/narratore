@@ -1,9 +1,11 @@
 (() => {
   'use strict';
   const KEY = 'narratore.sentences';
+  const PAUSE_KEY = 'narratore.pause';
   const $ = (id) => document.getElementById(id);
-  const form = $('form'), text = $('text'), list = $('list'),
-        empty = $('empty'), playAll = $('playAll');
+  const form = $('form'), text = $('text'), list = $('list'), empty = $('empty'),
+        playAll = $('playAll'), stopAll = $('stopAll'),
+        pause = $('pause'), pauseVal = $('pauseVal');
 
   const synth = window.speechSynthesis;
   if (!synth) $('warn').hidden = false;
@@ -11,11 +13,27 @@
   let sentences = [];
   try { sentences = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) {}
   let nextId = sentences.reduce((m, s) => Math.max(m, s.id), 0) + 1;
-  let playingId = null;
-  let queueToken = 0; // invalidates running "play all" queue
+
+  let playingId = null;   // sentence being spoken right now
+  let lastId = null;      // last played sentence, stays highlighted
+  let queueToken = 0;     // invalidates a running "play all" queue
+  let allRunning = false; // "play all" queue is active
+  let allPaused = false;  // ...and paused
 
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(sentences)); } catch (e) {} };
 
+  // ---- pause between sentences (slider) ----
+  try { const p = Number(localStorage.getItem(PAUSE_KEY)); if (p >= 1 && p <= 10) pause.value = p; } catch (e) {}
+  const showPause = () => { pauseVal.textContent = pause.value + ' s'; };
+  showPause();
+  pause.addEventListener('input', () => {
+    showPause();
+    try { localStorage.setItem(PAUSE_KEY, pause.value); } catch (e) {}
+  });
+  const pauseMs = () => Number(pause.value) * 1000;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // ---- text handling ----
   // Split text into sentences: by new lines and after . ! ? …
   function split(raw) {
     return raw.split(/\n+/)
@@ -41,22 +59,34 @@
     });
   }
 
-  function stop() {
-    queueToken++;
-    if (synth) synth.cancel();
-    setPlaying(null);
-    playAll.textContent = '▶ Riproduci tutto';
+  // ---- UI state ----
+  function updateUI() {
+    for (const li of list.children) {
+      const id = Number(li.dataset.id);
+      const active = id === playingId;
+      li.classList.toggle('last', id === lastId);
+      const btn = li.querySelector('.play');
+      btn.textContent = active ? '■' : '▶';
+      btn.setAttribute('aria-label', active ? 'Ferma' : 'Riproduci frase');
+    }
+    playAll.textContent = !allRunning ? '▶ Riproduci tutto' : allPaused ? '▶ Riprendi' : '⏸ Pausa';
+    stopAll.disabled = !allRunning && playingId === null;
   }
 
   function setPlaying(id) {
     playingId = id;
-    for (const li of list.children) {
-      const on = Number(li.dataset.id) === id;
-      li.classList.toggle('playing', on);
-      const btn = li.querySelector('.icon:not(.del)');
-      btn.textContent = on ? '■' : '▶';
-      btn.setAttribute('aria-label', on ? 'Ferma' : 'Riproduci frase');
-    }
+    if (id !== null) lastId = id;
+    updateUI();
+  }
+
+  // ---- playback control ----
+  function stop() {
+    queueToken++;
+    allRunning = false;
+    allPaused = false;
+    playingId = null;
+    if (synth) { synth.cancel(); synth.resume(); }
+    updateUI();
   }
 
   async function playOne(s) {
@@ -68,34 +98,57 @@
     if (token === queueToken) setPlaying(null);
   }
 
-  const PAUSE_MS = 1000;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // wait for the pause between sentences; the countdown halts while paused
+  async function gap(token) {
+    let left = pauseMs();
+    while (left > 0 && token === queueToken) {
+      await sleep(100);
+      if (!allPaused) left -= 100;
+    }
+  }
 
-  function setPlayAllRunning(on) {
-    playAll.textContent = on ? '■ Ferma' : '▶ Riproduci tutto';
+  async function waitWhilePaused(token) {
+    while (allPaused && token === queueToken) await sleep(100);
   }
 
   async function playEverything() {
     if (!synth) return;
     stop();
     const token = queueToken;
-    setPlayAllRunning(true);
+    allRunning = true;
+    updateUI();
     const items = [...sentences];
     for (let i = 0; i < items.length; i++) {
+      await waitWhilePaused(token);
       if (token !== queueToken) return;
       setPlaying(items[i].id);
       await speak(items[i]);
       if (token !== queueToken) return;
       if (i < items.length - 1) {
         setPlaying(null);
-        await sleep(PAUSE_MS);
+        await gap(token);
+        if (token !== queueToken) return;
       }
     }
-    if (token === queueToken) { setPlaying(null); setPlayAllRunning(false); }
+    allRunning = false;
+    setPlaying(null);
+  }
+
+  function togglePauseAll() {
+    if (!allRunning) return;
+    if (allPaused) {
+      allPaused = false;
+      synth.resume();
+    } else {
+      allPaused = true;
+      if (synth.speaking) synth.pause();
+    }
+    updateUI();
   }
 
   function remove(id) {
     if (playingId === id) stop();
+    if (lastId === id) lastId = null;
     sentences = sentences.filter((s) => s.id !== id);
     save();
     render();
@@ -108,8 +161,7 @@
       li.dataset.id = s.id;
 
       const play = document.createElement('button');
-      play.type = 'button'; play.className = 'icon'; play.textContent = '▶';
-      play.setAttribute('aria-label', 'Riproduci frase');
+      play.type = 'button'; play.className = 'icon play';
       play.onclick = () => (playingId === s.id ? stop() : playOne(s));
 
       const span = document.createElement('span');
@@ -124,9 +176,9 @@
       list.append(li);
     }
     empty.hidden = sentences.length > 0;
-    $('actions').hidden = sentences.length === 0;
-    playAll.hidden = !synth;
-    setPlaying(playingId);
+    $('controls').hidden = sentences.length === 0;
+    playAll.hidden = stopAll.hidden = !synth;
+    updateUI();
   }
 
   form.addEventListener('submit', (e) => {
@@ -149,14 +201,13 @@
     if (!sentences.length || !confirm('Eliminare tutte le frasi?')) return;
     stop();
     sentences = [];
+    lastId = null;
     save();
     render();
   });
 
-  playAll.addEventListener('click', () => {
-    if (playAll.textContent.includes('Ferma')) stop();
-    else playEverything();
-  });
+  playAll.addEventListener('click', () => (allRunning ? togglePauseAll() : playEverything()));
+  stopAll.addEventListener('click', stop);
 
   // Voices load asynchronously in some browsers
   if (synth) {

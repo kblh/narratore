@@ -26,9 +26,16 @@
     <ul id="list"></ul>
     <p id="empty" class="empty">Nessuna frase per ora.</p>
 
-    <div id="actions" class="actions" hidden>
-      <button id="playAll" class="primary" type="button">▶ Riproduci tutto</button>
-      <button id="clearAll" class="primary danger" type="button">✕ Elimina tutto</button>
+    <div id="controls" hidden>
+      <div class="pause">
+        <label for="pause">Pausa tra le frasi: <output id="pauseVal">1 s</output></label>
+        <input id="pause" type="range" min="1" max="10" step="1" value="1">
+      </div>
+      <div class="actions">
+        <button id="playAll" class="primary" type="button">▶ Riproduci tutto</button>
+        <button id="stopAll" class="primary" type="button" disabled>■ Ferma</button>
+        <button id="clearAll" class="primary danger" type="button">✕ Elimina tutto</button>
+      </div>
     </div>
   </main>
   <script src="app.js"></script>

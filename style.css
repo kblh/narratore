@@ -26,14 +26,18 @@ button { font: inherit; cursor: pointer; border-radius: 6px; }
   margin-top: 8px; width: 100%; padding: 10px;
   color: var(--bg); background: var(--accent); border: 0;
 }
-.actions { display: flex; gap: 8px; margin-top: 20px; }
+.pause { margin-top: 20px; }
+.pause label { display: block; margin-bottom: 4px; }
+.pause input { width: 100%; accent-color: var(--accent); }
+.actions { display: flex; gap: 8px; margin-top: 12px; }
 .actions .primary { margin-top: 0; flex: 1; }
 .primary.danger { background: var(--danger); }
 
 ul { list-style: none; padding: 0; margin: 24px 0 0; }
-li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); border-radius: 6px; }
 li .txt { flex: 1; overflow-wrap: anywhere; }
-li.playing .txt { color: var(--accent); font-weight: 600; }
+li.last { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+li.last .txt { font-weight: 600; }
 .icon {
   flex: none; width: 36px; height: 36px; padding: 0;
   color: var(--accent); background: transparent; border: 2px solid var(--accent); border-radius: 50%;
@@ -42,3 +46,4 @@ li.playing .txt { color: var(--accent); font-weight: 600; }
 .empty, .warn { opacity: .7; }
 .warn { color: var(--danger); opacity: 1; }
 [hidden] { display: none !important; }
+.icon:disabled, .primary:disabled { opacity: .35; cursor: default; }
