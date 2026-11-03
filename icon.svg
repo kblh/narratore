@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 592 592">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b8795"/>
+      <stop offset="1" stop-color="#0b3f48"/>
+    </linearGradient>
+    <g id="bud">
+      <path d="M255 262C255 200 215 155 165 155C115 155 78 195 78 240C78 290 118 325 160 325C172 325 180 322 188 320C198 325 200 335 200 350V458H255Z"/>
+      <path d="M200 472H255V478C255 495 245 505 228 505C210 505 200 495 200 478Z"/>
+      <path d="M120 218C111 232 111 252 124 268" fill="none" stroke="#14727f" stroke-width="13" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <rect width="592" height="592" rx="130" fill="url(#g)"/>
+  <g fill="#fafaf7" transform="translate(296 296) scale(.85) translate(-290 -275)">
+    <use href="#bud"/>
+    <use href="#bud" transform="translate(580 0) scale(-1 1)"/>
+    <g fill="none" stroke="#fafaf7" stroke-width="16" stroke-linecap="round">
+      <path d="M212 85Q290 20 368 85"/>
+      <path d="M232 117Q290 66 348 117"/>
+      <path d="M255 148Q290 118 325 148"/>
+    </g>
+  </g>
+</svg>
